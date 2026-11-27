@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        working-directory: python
+        run: pip install -e ".[dev]"
+      - name: Test
+        working-directory: python
+        run: pytest -q
+
+  cpp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        working-directory: cpp
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+      - name: Test
+        working-directory: cpp
+        run: ctest --test-dir build --output-on-failure
+      - name: Test with AddressSanitizer + UBSan
+        working-directory: cpp
+        run: |
+          g++ -std=c++17 -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer \
+            -Iinclude -DBSM_REFERENCE_CSV='"../data/reference.csv"' \
+            src/black_scholes.cpp tests/test_black_scholes.cpp -o bsm_tests_san
+          ./bsm_tests_san

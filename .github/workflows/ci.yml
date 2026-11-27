@@ -35,6 +35,15 @@ jobs:
       - name: Test
         working-directory: cpp
         run: ctest --test-dir build --output-on-failure
+      - name: Test with FMA enabled (-march=native) and optimisation variants
+        working-directory: cpp
+        run: |
+          for flags in "-O0" "-O3" "-O3 -march=native" "-O2 -march=native -ffp-contract=fast"; do
+            g++ -std=c++17 $flags -Iinclude -DBSM_REFERENCE_CSV='"../data/reference.csv"' \
+              src/black_scholes.cpp tests/test_black_scholes.cpp -o bsm_tests_variant
+            echo "== $flags"; ./bsm_tests_variant | tail -1
+            ./bsm_tests_variant > /dev/null
+          done
       - name: Test with AddressSanitizer + UBSan
         working-directory: cpp
         run: |

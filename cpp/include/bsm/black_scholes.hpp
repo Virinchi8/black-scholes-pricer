@@ -45,8 +45,9 @@ Greeks greeks(OptionType type, double S, double K, double T, double r, double si
 // Implied volatility via safeguarded Newton on log-price, working on the
 // out-of-the-money side (in-the-money quotes are converted by put-call parity).
 // Returns iv = NaN, converged = false for quotes with no solution: price at or below
-// intrinsic value, at or above the upper no-arbitrage bound, non-finite, or an
-// implied vol outside [sigma_lo, sigma_hi]. Throws std::invalid_argument for invalid
+// intrinsic value, at or above the upper no-arbitrage bound, non-finite, an
+// in-the-money quote whose time value is within rounding noise (8 ulps of S e^{-qT} + K e^{-rT}), or
+// an implied vol outside [sigma_lo, sigma_hi]. Throws std::invalid_argument for invalid
 // contract terms (S <= 0, K <= 0, T <= 0, non-finite inputs).
 IVResult implied_vol(OptionType type, double market_price, double S, double K, double T, double r,
                      double q = 0.0, double tol = 1e-12, int max_iter = 100, double sigma_lo = 1e-8,

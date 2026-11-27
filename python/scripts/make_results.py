@@ -190,14 +190,16 @@ res = bsm.implied_vol(p_i, S_i, K_i, T_i, r_i, kind_i, q_i, full_output=True)
 
 phi_i = np.where(kind_i == "call", 1.0, -1.0)
 intrinsic = np.maximum(phi_i * (S_i * np.exp(-q_i * T_i) - K_i * np.exp(-r_i * T_i)), 0.0)
-has_tv = p_i > intrinsic
+has_tv = (p_i - intrinsic) > np.where(  # time value above rounding noise
+    intrinsic > 0, 8 * np.finfo(float).eps * (S_i * np.exp(-q_i * T_i) + K_i * np.exp(-r_i * T_i)), 0.0
+)
 vega_i = bsm.vega(S_i, K_i, T_i, r_i, sig_i, q_i)
 ident = has_tv & (vega_i > 1e-3)
 err = np.abs(res.iv - sig_i)
 rel_price_err = np.abs(bsm.price(S_i[res.converged], K_i[res.converged], T_i[res.converged], r_i, res.iv[res.converged], kind_i[res.converged], q_i) - p_i[res.converged]) / p_i[res.converged]
 results["implied_vol"] = {
     "n": n_iv,
-    "share_with_time_value_in_float64": float(has_tv.mean()),
+    "share_with_time_value_above_noise": float(has_tv.mean()),
     "converged_among_those": float(res.converged[has_tv].mean()),
     "unconverged_with_time_value": int((has_tv & ~res.converged).sum()),
     "max_sigma_error_identifiable": float(np.nanmax(err[ident])),

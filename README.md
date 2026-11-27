@@ -17,7 +17,7 @@ This is the first project in a series on quantitative finance; every number and 
 # Python
 cd python
 pip install -e ".[dev]"
-pytest                                  # 68 tests
+pytest                                  # 80 tests
 python scripts/make_results.py          # regenerates docs/*.png and docs/results.json
 ```
 
@@ -94,7 +94,9 @@ The starting point is `max(½·√(2|ln(F/K)|/T), √(2π/T)·price/(S e^{−qT}
 - the price is at or below intrinsic value, or at or above the upper no-arbitrage bound (`S e^{−qT}` for a call, `K e^{−rT}` for a put), or is not finite;
 - the implied volatility lies outside the search bracket `[1e-8, 10]` (configurable).
 
-There is also a subtler case that is a property of floating point, not of the solver. For a deep in-the-money, short-dated option, the time value can be smaller than the rounding error of the quote itself (for example `1.4e-14` on a price of `28.94`). The price *equals* intrinsic value in `float64`, so it contains no information about volatility. In the tests this is handled explicitly: such quotes must return `nan`, and every quote with representable time value must converge.
+There is also a subtler case that is a property of floating point, not of the solver. For a deep in-the-money, short-dated option, the time value can be smaller than the rounding error of the quote itself (for example `1.4e-14` on a price of `28.94`): the price is intrinsic value to within rounding, so it contains no information about volatility. Such quotes are rejected: an in-the-money quote must have time value above `8 ε (S e^{−qT} + K e^{−rT})` (about 4e-13 on a spot of 100), the accuracy to which the intrinsic value can even be computed. In the tests this is explicit: quotes within rounding noise must return `nan`, and every quote above it must converge.
+
+This rule exists because GitHub's CI caught a bug: the first version only rejected prices *at or below* intrinsic value. A quote one rounding step above intrinsic value returned `nan` or a meaningless volatility depending on whether the compiler fused multiply-adds (`-march=native`), and the benchmark's worst error (0.017) came from such quotes. It now passes on seven compiler/flag combinations including FMA, `-ffast-math` and ASan/UBSan.
 
 ## Results
 
@@ -123,7 +125,7 @@ All figures come from `python/scripts/make_results.py` (seeded) and the C++ test
 
 **Implied-vol solver** on 100,000 random contracts (strikes from 40 to 246 with S=100, T ∈ [0.02, 3], σ ∈ [0.05, 1.5], calls and puts, q = 1.5%):
 
-- 99.17% of the quotes have representable time value; **all of them converge**, with no failures.
+- 98.98% of the quotes carry time value above rounding noise; **all of them converge**, with no failures. The rest are rejected as described above.
 - Max recovered-vol error where the quote identifies σ (vega > 1e-3): **2.5e-11**.
 - Iterations: mean 6.3, median 6, 99th percentile 12, max 24.
 - Re-pricing the recovered σ reproduces the quote to a relative 1e-12 for 99.9% of quotes; the worst case is 4.5e-10, on quotes around 1e-296 where the pricing formula itself runs out of float64 range.
@@ -134,14 +136,14 @@ All figures come from `python/scripts/make_results.py` (seeded) and the C++ test
 
 | | Python (NumPy, vectorised) | C++ (-O2, scalar loop) |
 |---|---|---|
-| price | 0.08 s | 0.05 s |
-| implied vol | 1.1 s | 0.64 s |
+| price | 0.07 s | 0.06 s |
+| implied vol | 1.1 s | 0.6 s |
 
-Vectorised NumPy is competitive for pricing; the C++ version is faster for implied vol but not dramatically. The point of the C++ port is a self-contained library with the same numerics and a command-line tool, not raw speed.
+Vectorised NumPy is competitive for pricing; the C++ version is about twice as fast for implied vol. The point of the C++ port is a self-contained library with the same numerics and a command-line tool, not raw speed.
 
 ## Testing
 
-`pytest` runs 68 tests; the C++ runner makes ~18,600 checks (random-parameter loops count each check). Both are run in CI.
+`pytest` runs 80 tests; the C++ runner makes ~18,600 checks (random-parameter loops count each check). Both are run in CI.
 
 | Check | What it guards against |
 |---|---|
@@ -154,8 +156,9 @@ Vectorised NumPy is competitive for pricing; the C++ version is faster for impli
 | Implied-vol round trip over a moneyness × maturity × vol grid | solver correctness |
 | Agreement with `scipy.optimize.brentq` | independent root-finder cross-check |
 | Wings (prices ~1e-130), invalid and arbitrage-violating quotes | robustness; `nan`, never a wrong number |
+| Quotes within a few ulps of intrinsic value | compiler-dependent answers (found by CI, see above) |
 | 50-digit reference CSV in both languages | cross-language correctness |
-| ASan + UBSan build of the C++ tests | memory and undefined-behaviour bugs |
+| C++ tests under -O0/-O2/-O3, `-march=native` (FMA), `-ffast-math`, ASan + UBSan | compiler- and flag-dependent behaviour; memory and undefined-behaviour bugs |
 
 ## Scope and limitations
 

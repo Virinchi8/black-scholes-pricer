@@ -49,19 +49,19 @@
   },
   "implied_vol": {
     "n": 100000,
-    "share_with_time_value_in_float64": 0.9917,
+    "share_with_time_value_above_noise": 0.98984,
     "converged_among_those": 1.0,
     "unconverged_with_time_value": 0,
     "max_sigma_error_identifiable": 2.5018542793020515e-11,
     "max_relative_price_error_all_converged": 4.4602828435277446e-10,
-    "share_price_error_below_1e-12": 0.9990420490067561,
-    "iterations_mean": 6.26039124735303,
+    "share_price_error_below_1e-12": 0.9990402489291199,
+    "iterations_mean": 6.252990382284006,
     "iterations_median": 6.0,
     "iterations_p99": 12.0,
     "iterations_max": 24
   },
   "python_throughput_1M_options": {
-    "price_seconds": 0.12217363299998851,
-    "implied_vol_seconds": 1.713181789000032
+    "price_seconds": 0.07709924599998885,
+    "implied_vol_seconds": 1.1770920200000319
   }
 }

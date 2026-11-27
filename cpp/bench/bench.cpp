@@ -32,7 +32,7 @@ int main() {
     auto t2 = clock::now();
 
     // Accuracy is only meaningful where the quote identifies the volatility (vega not ~0): a deep
-    // in-the-money price that equals intrinsic value to 1e-14 says nothing about sigma.
+    // in-the-money price that equals intrinsic value to within rounding says nothing about sigma.
     double max_err = 0;
     long long identifiable = 0;
     for (int i = 0; i < n; ++i) {
@@ -47,7 +47,7 @@ int main() {
     std::printf("price:       %.3f s for %d options\n", sec(t0, t1), n);
     std::printf("implied vol: %.3f s for %d options (mean %.2f iterations)\n", sec(t1, t2), n,
                 static_cast<double>(iterations) / n);
-    std::printf("  %lld converged; %lld unidentifiable quotes (price equals intrinsic in double precision)\n",
+    std::printf("  %lld converged; %lld unidentifiable quotes (time value within rounding noise of intrinsic)\n",
                 converged, static_cast<long long>(n) - converged);
     std::printf("  max |iv - sigma| over %lld quotes with vega > 1e-3: %.2e\n", identifiable, max_err);
     return 0;

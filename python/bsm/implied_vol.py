@@ -34,6 +34,10 @@ from ._common import norm_pdf, prepare, squeeze
 from .pricing import price_arrays
 
 
+# An in-the-money quote must carry time value above this many ulps of S e^{-qT} + K e^{-rT} to be usable.
+TIME_VALUE_NOISE = 8.0 * np.finfo(float).eps
+
+
 @dataclass
 class IVResult:
     """Detailed solver output (arrays have the broadcast input shape)."""
@@ -98,8 +102,9 @@ def implied_vol(
     -------
     Implied volatility (float or array). Elements where no solution exists are
     ``nan``: prices outside the no-arbitrage bounds (at or below intrinsic value,
-    or at or above the upper bound), non-finite prices, or an implied vol outside
-    ``[sigma_lo, sigma_hi]``.
+    or at or above the upper bound), non-finite prices, in-the-money quotes whose
+    time value is within rounding noise (8 ulps of S e^{-qT} + K e^{-rT}), or an implied vol
+    outside ``[sigma_lo, sigma_hi]``.
     """
     raw = (price, S, K, T, r, q, kind)
     p = np.asarray(price, dtype=float)
@@ -119,7 +124,12 @@ def implied_vol(
     itm = lower > 0.0
     phi_o = np.where(itm, -phi, phi)
     p_o = np.where(itm, p - lower, p)
-    valid &= p_o > 0.0
+    # An ITM quote whose time value is within rounding noise of the forward intrinsic value
+    # carries no volatility information: the subtraction S e^{-qT} - K e^{-rT} is only accurate to
+    # a few ulps of its *operands*, and what a solver returns for such a quote depends on how the
+    # compiler/CPU rounds it (e.g. fused multiply-add). Reject it instead of returning a number.
+    noise = np.where(itm, TIME_VALUE_NOISE * (S_ * np.exp(-q_ * T_) + K_ * np.exp(-r_ * T_)), 0.0)
+    valid &= p_o > noise
 
     # The root must lie inside [sigma_lo, sigma_hi]: check the bracket ends.
     with np.errstate(invalid="ignore"):

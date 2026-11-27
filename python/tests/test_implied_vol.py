@@ -25,9 +25,11 @@ class TestRoundTrip:
         res = bsm.implied_vol(p, S, K, T, R, kind, Q, full_output=True)
         phi = np.where(kind == "call", 1.0, -1.0)
         intrinsic = np.maximum(phi * (S * np.exp(-Q * T) - K * np.exp(-R * T)), 0.0)
-        # A price equal to intrinsic value *in floating point* (time value below ~1e-15,
-        # deep ITM and short-dated) carries no volatility information: nan is correct.
-        has_time_value = p > intrinsic
+        # An ITM quote whose time value is within rounding noise (8 ulps of S e^{-qT} + K e^{-rT})
+        # carries no volatility information (deep ITM and short-dated): nan is the correct answer.
+        eps = np.finfo(float).eps
+        scale = S * np.exp(-Q * T) + K * np.exp(-R * T)
+        has_time_value = (p - intrinsic) > np.where(intrinsic > 0, 8 * eps * scale, 0.0)
         assert has_time_value.sum() > 380
         assert res.converged[has_time_value].all()
         assert not res.converged[~has_time_value].any()
@@ -121,6 +123,29 @@ class TestInvalidPrices:
             bsm.implied_vol(5.0, 100, 100, 0.0, 0.05, "call")
         with pytest.raises(ValueError):
             bsm.implied_vol(5.0, 100, -100, 1.0, 0.05, "call")
+
+
+class TestNoiseLevelQuotes:
+    """A quote within rounding noise of intrinsic value must be rejected, never guessed at.
+
+    What a solver would return for such a quote depends on how the compiler/CPU rounds the
+    subtraction (e.g. fused multiply-add), so the answer must not depend on it.
+    """
+
+    @pytest.mark.parametrize("kind", ["call", "put"])
+    @pytest.mark.parametrize("ulps", [0, 1, 2, 4, 7])
+    def test_within_rounding_noise_of_intrinsic_is_nan(self, kind, ulps):
+        S, K, T = 100.0, 90.0 if kind == "call" else 110.0, 0.5  # in the money
+        phi = 1.0 if kind == "call" else -1.0
+        intrinsic = phi * (S * np.exp(-Q * T) - K * np.exp(-R * T))
+        quote = intrinsic * (1.0 + ulps * np.finfo(float).eps)
+        assert np.isnan(bsm.implied_vol(quote, S, K, T, R, kind, Q))
+
+    @pytest.mark.parametrize("kind", ["call", "put"])
+    def test_real_time_value_just_above_noise_is_accepted(self, kind):
+        S, K, T = 100.0, 90.0 if kind == "call" else 110.0, 0.5
+        quote = bsm.price(S, K, T, R, 0.25, kind, Q)  # genuine time value, orders above noise
+        assert bsm.implied_vol(quote, S, K, T, R, kind, Q) == pytest.approx(0.25, abs=1e-9)
 
 
 class TestInterface:

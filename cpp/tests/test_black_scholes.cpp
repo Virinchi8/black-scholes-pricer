@@ -177,10 +177,11 @@ void test_implied_vol_roundtrip() {
             CHECK_NEAR(px({c.type, c.S, c.K, c.T, c.r, r.iv, c.q}), p, 1e-9 * p);
             if (vega > 1e-3) CHECK_NEAR(r.iv, c.sigma, 1e-7);
         } else {
-            // Only acceptable if the quote carries no information (equals intrinsic value in double precision).
+            // Only acceptable if the quote carries no volatility information: its time value is within
+            // rounding noise (8 ulps of the operands) of the forward intrinsic value.
             const double ds = c.S * std::exp(-c.q * c.T), dk = c.K * std::exp(-c.r * c.T);
             const double lo = std::max(c.type == OptionType::Call ? ds - dk : dk - ds, 0.0);
-            CHECK(p <= lo);
+            CHECK(p - lo <= 16.0 * std::numeric_limits<double>::epsilon() * (ds + dk));
         }
     }
     std::printf("  %d/%d converged, max iterations %d\n", converged, total, max_it);
@@ -202,7 +203,10 @@ void test_implied_vol_wings_and_invalid() {
     }
     const double ds = 100 * std::exp(-0.015), dk = 100 * std::exp(-0.04);
     for (auto type : {OptionType::Call, OptionType::Put}) {
-        const double lo = std::max(type == OptionType::Call ? ds - dk : dk - ds, 0.0);
+        // The exact lower boundary (forward intrinsic value) must come from the library's own
+        // arithmetic: recomputing exp() here can differ by one ulp (e.g. compile-time constant
+        // folding vs the runtime libm), which would turn "at intrinsic" into "1 ulp above".
+        const double lo = bsm::price(type, 100, 100, 1.0, 0.04, 0.0, 0.015);
         const double hi = type == OptionType::Call ? ds : dk;
         for (double bad : std::vector<double>{lo, lo - 0.5, hi, hi + 1.0, 0.0, -1.0, std::nan(""),
                                               std::numeric_limits<double>::infinity()}) {
@@ -214,6 +218,27 @@ void test_implied_vol_wings_and_invalid() {
     const double p = bsm::price(OptionType::Call, 100, 100, 1.0, 0.04, 3.0, 0.015);
     CHECK(!bsm::implied_vol(OptionType::Call, p, 100, 100, 1.0, 0.04, 0.015, 1e-12, 100, 1e-8, 2.0).converged);
     CHECK_NEAR(bsm::implied_vol(OptionType::Call, p, 100, 100, 1.0, 0.04, 0.015).iv, 3.0, 1e-8);
+}
+
+void test_noise_level_quotes_are_rejected() {
+    g_current = "noise-level quotes";
+    // A quote within a few ulps of intrinsic value must be rejected on every compiler/CPU, never
+    // "solved": the result for it would otherwise depend on fused multiply-add and rounding.
+    const double eps = std::numeric_limits<double>::epsilon();
+    for (auto type : {OptionType::Call, OptionType::Put}) {
+        const double K = type == OptionType::Call ? 90.0 : 110.0;
+        const double intrinsic = bsm::price(type, 100, K, 0.5, 0.04, 0.0, 0.015);
+        for (int ulps : {0, 1, 2, 4, 7}) {
+            const bsm::IVResult r =
+                bsm::implied_vol(type, intrinsic * (1.0 + ulps * eps), 100, K, 0.5, 0.04, 0.015);
+            CHECK(!r.converged && std::isnan(r.iv));
+        }
+        // Genuine time value is accepted.
+        const double quote = bsm::price(type, 100, K, 0.5, 0.04, 0.25, 0.015);
+        const bsm::IVResult ok = bsm::implied_vol(type, quote, 100, K, 0.5, 0.04, 0.015);
+        CHECK(ok.converged);
+        CHECK_NEAR(ok.iv, 0.25, 1e-9);
+    }
 }
 
 void test_input_validation() {
@@ -300,6 +325,7 @@ int main() {
         {"call/put Greek relations", test_call_put_relations},
         {"implied vol round trip", test_implied_vol_roundtrip},
         {"implied vol wings and invalid quotes", test_implied_vol_wings_and_invalid},
+        {"noise-level quotes", test_noise_level_quotes_are_rejected},
         {"input validation", test_input_validation},
         {"reference CSV", test_against_reference_csv},
     };

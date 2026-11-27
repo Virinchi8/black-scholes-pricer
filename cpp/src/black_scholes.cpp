@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace bsm {
@@ -104,7 +105,12 @@ IVResult implied_vol(OptionType type, double market_price, double S, double K, d
     const bool itm = lower > 0.0;
     const double phi_o = itm ? -phi : phi;
     const double p = itm ? market_price - lower : market_price;
-    if (!(p > 0.0)) return rejected;
+    // An ITM quote whose time value is within rounding noise of the forward intrinsic value carries
+    // no volatility information: S e^{-qT} - K e^{-rT} is only accurate to a few ulps of its
+    // operands, and what a solver returns for such a quote depends on compiler/CPU rounding (e.g.
+    // fused multiply-add). Reject it rather than return a meaningless number.
+    const double noise = itm ? 8.0 * std::numeric_limits<double>::epsilon() * (disc_s + disc_k) : 0.0;
+    if (!(p > noise)) return rejected;
 
     // The root must lie inside [sigma_lo, sigma_hi].
     if (!(p > price_core(phi_o, S, K, T, r, sigma_lo, q)) || !(p < price_core(phi_o, S, K, T, r, sigma_hi, q)))

@@ -51,3 +51,14 @@ jobs:
             -Iinclude -DBSM_REFERENCE_CSV='"../data/reference.csv"' \
             src/black_scholes.cpp tests/test_black_scholes.cpp -o bsm_tests_san
           ./bsm_tests_san
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test JavaScript port against the 50-digit references
+        working-directory: web
+        run: npm test

@@ -18,6 +18,7 @@ from mpmath import exp, log, mp, mpf, ncdf, npdf, sqrt
 mp.dps = 50
 
 OUT = Path(__file__).resolve().parents[2] / "data" / "reference.csv"
+OUT_NORM = OUT.with_name("normcdf_reference.csv")
 OUT.parent.mkdir(exist_ok=True)
 
 COLUMNS = ["kind", "S", "K", "T", "r", "q", "sigma", "price", "delta", "gamma", "vega", "theta", "rho", "vanna", "volga"]
@@ -61,5 +62,17 @@ def main(n=600, seed=20261127):
     print(f"wrote {len(rows)} rows to {OUT}")
 
 
+def write_normcdf_reference():
+    """N(z) in 50-digit arithmetic on a grid out to the far tails (used by the JavaScript tests)."""
+    zs = [i / 8 for i in range(-96, 97)]  # -12 ... 12
+    with OUT_NORM.open("w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["z", "cdf"])
+        for z in zs:
+            w.writerow([repr(float(z)), mp.nstr(ncdf(mpf(z)), 25)])
+    print(f"wrote {len(zs)} rows to {OUT_NORM}")
+
+
 if __name__ == "__main__":
     main()
+    write_normcdf_reference()

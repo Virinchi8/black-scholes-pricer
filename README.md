@@ -1,13 +1,13 @@
-# Black-Scholes pricer: Greeks and implied volatility (Python + C++)
+# Black-Scholes pricer: Greeks and implied volatility (Python + C++ + web demo)
 
 [![CI](https://github.com/Virinchi8/black-scholes-pricer/actions/workflows/ci.yml/badge.svg)](https://github.com/Virinchi8/black-scholes-pricer/actions/workflows/ci.yml)
 
-A small, carefully tested implementation of the Black-Scholes-Merton model for European options, written twice: a vectorised **Python** package (NumPy/SciPy) and a dependency-free **C++17** library with the same API and the same numerical method.
+A small, carefully tested implementation of the Black-Scholes-Merton model for European options, written three times: a vectorised **Python** package (NumPy/SciPy), a dependency-free **C++17** library with the same API and the same numerical method, and a dependency-free **JavaScript** port that powers an interactive web demo (`web/`).
 
 - **Pricing** of calls and puts with a continuous dividend yield `q`.
 - **Analytic Greeks:** delta, gamma, vega, theta, rho, plus the second-order vanna and volga.
 - **Implied-volatility solver** that converges for every arbitrage-free quote, including far out-of-the-money wings where plain Newton fails, and says so honestly (`nan`) when a quote carries no volatility information.
-- **Verification** against put-call parity, finite differences, textbook values, and **50-digit mpmath reference values**; the Python and C++ versions are both checked against the same reference file.
+- **Verification** against put-call parity, finite differences, textbook values, and **50-digit mpmath reference values**; the Python, C++ and JavaScript versions are all checked against the same reference files.
 
 This is the first project in a series on quantitative finance; every number and figure below is reproduced by a script in this repo.
 
@@ -143,7 +143,7 @@ Vectorised NumPy is competitive for pricing; the C++ version is about twice as f
 
 ## Testing
 
-`pytest` runs 80 tests; the C++ runner makes ~18,600 checks (random-parameter loops count each check). Both are run in CI.
+`pytest` runs 80 tests; the C++ runner makes ~18,600 checks (random-parameter loops count each check); the JavaScript port has 13 tests (`cd web && npm test`). All are run in CI.
 
 | Check | What it guards against |
 |---|---|
@@ -157,7 +157,7 @@ Vectorised NumPy is competitive for pricing; the C++ version is about twice as f
 | Agreement with `scipy.optimize.brentq` | independent root-finder cross-check |
 | Wings (prices ~1e-130), invalid and arbitrage-violating quotes | robustness; `nan`, never a wrong number |
 | Quotes within a few ulps of intrinsic value | compiler-dependent answers (found by CI, see above) |
-| 50-digit reference CSV in both languages | cross-language correctness |
+| 50-digit reference CSV in all three languages (plus a 50-digit normal-CDF table for the JavaScript port, which has no `erfc`) | cross-language correctness |
 | C++ tests under -O0/-O2/-O3, `-march=native` (FMA), `-ffast-math`, ASan + UBSan | compiler- and flag-dependent behaviour; memory and undefined-behaviour bugs |
 
 ## Scope and limitations
@@ -171,9 +171,10 @@ Vectorised NumPy is competitive for pricing; the C++ version is about twice as f
 ```
 python/          bsm package, tests, scripts (make_results.py, make_reference.py)
 cpp/             include/bsm/black_scholes.hpp, src/, tests/, bench/, CMakeLists.txt
-data/            reference.csv: 600 contracts, 50-digit ground truth
+web/             interactive demo (index.html, src/bsm.js port, tests/)
+data/            reference.csv: 600 contracts; normcdf_reference.csv: 193 points, both 50-digit ground truth
 docs/            figures and results.json produced by make_results.py
-.github/         CI (Python tests + C++ build, tests, sanitizers)
+.github/         CI (Python tests, C++ build/tests/sanitizers, JavaScript tests)
 ```
 
 ## License

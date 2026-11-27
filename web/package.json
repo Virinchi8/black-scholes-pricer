@@ -1,0 +1,11 @@
+{
+  "name": "bsm-web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive Black-Scholes demo: JavaScript port of the bsm pricer, Greeks and implied-vol solver",
+  "scripts": {
+    "test": "node --test tests/bsm.test.mjs",
+    "serve": "python3 -m http.server 8080"
+  }
+}

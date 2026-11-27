@@ -1,0 +1,67 @@
+{
+  "hull_example": {
+    "call": 4.759422392871532,
+    "put": 0.8085993729000922
+  },
+  "atm_benchmark": {
+    "call": 10.450583572185565,
+    "put": 5.573526022256971
+  },
+  "parity": {
+    "n": 200000,
+    "max_relative_gap": 5.156730669418943e-16,
+    "median_relative_gap": 5.786961940682875e-17
+  },
+  "greeks_vs_finite_difference": {
+    "delta": {
+      "max_abs_error_over_max_abs_value": 9.550504204264022e-07
+    },
+    "gamma": {
+      "max_abs_error_over_max_abs_value": 8.309087648534581e-07
+    },
+    "vega": {
+      "max_abs_error_over_max_abs_value": 2.0014191752258527e-07
+    },
+    "theta": {
+      "max_abs_error_over_max_abs_value": 3.811717192598109e-06
+    },
+    "rho": {
+      "max_abs_error_over_max_abs_value": 6.7451407618656665e-12
+    },
+    "vanna": {
+      "max_abs_error_over_max_abs_value": 1.9224752208420635e-06
+    },
+    "volga": {
+      "max_abs_error_over_max_abs_value": 1.6480538870021735e-06
+    }
+  },
+  "python_vs_50_digit_reference": {
+    "rows": 600,
+    "price_max_relative_error": 9.048256945512455e-14,
+    "delta_max_abs_error_over_max_abs_value": 3.3455020619581043e-16,
+    "gamma_max_abs_error_over_max_abs_value": 6.864341350323372e-16,
+    "vega_max_abs_error_over_max_abs_value": 4.319414841929441e-16,
+    "theta_max_abs_error_over_max_abs_value": 3.108798569641809e-16,
+    "rho_max_abs_error_over_max_abs_value": 2.7154836577496516e-16,
+    "vanna_max_abs_error_over_max_abs_value": 7.5621559292181e-16,
+    "volga_max_abs_error_over_max_abs_value": 4.2455689266635154e-16,
+    "implied_vol_max_abs_error": 7.251976796851523e-13
+  },
+  "implied_vol": {
+    "n": 100000,
+    "share_with_time_value_in_float64": 0.9917,
+    "converged_among_those": 1.0,
+    "unconverged_with_time_value": 0,
+    "max_sigma_error_identifiable": 2.5018542793020515e-11,
+    "max_relative_price_error_all_converged": 4.4602828435277446e-10,
+    "share_price_error_below_1e-12": 0.9990420490067561,
+    "iterations_mean": 6.26039124735303,
+    "iterations_median": 6.0,
+    "iterations_p99": 12.0,
+    "iterations_max": 24
+  },
+  "python_throughput_1M_options": {
+    "price_seconds": 0.12217363299998851,
+    "implied_vol_seconds": 1.713181789000032
+  }
+}

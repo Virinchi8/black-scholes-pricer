@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/Virinchi8/black-scholes-pricer/actions/workflows/ci.yml/badge.svg)](https://github.com/Virinchi8/black-scholes-pricer/actions/workflows/ci.yml)
 
+**[Live demo](https://black-scholes-pricer-virinchi8.vercel.app)**: change the inputs and watch prices, Greeks and implied volatility update.
+
 A small, carefully tested implementation of the Black-Scholes-Merton model for European options, written three times: a vectorised **Python** package (NumPy/SciPy), a dependency-free **C++17** library with the same API and the same numerical method, and a dependency-free **JavaScript** port that powers an interactive web demo (`web/`).
 
 - **Pricing** of calls and puts with a continuous dividend yield `q`.
